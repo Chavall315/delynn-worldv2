@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\TheaterScheduleService;
+use Illuminate\View\View;
 
 class TheaterController extends Controller
 {
@@ -13,7 +14,7 @@ class TheaterController extends Controller
         $this->theaterService = $theaterService;
     }
 
-    public function index()
+    public function index(): View
     {
         $shows = $this->theaterService->getDelynnSchedule();
 

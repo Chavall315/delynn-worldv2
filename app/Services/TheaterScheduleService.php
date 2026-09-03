@@ -2,12 +2,13 @@
 
 namespace App\Services;
 
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 
 class TheaterScheduleService
 {
     protected string $baseUrl;
+
     protected string $apiKey;
 
     public function __construct()
@@ -19,10 +20,13 @@ class TheaterScheduleService
     /**
      * Ambil jadwal theater yang ada Delynn di lineup-nya.
      * Di-cache 5 menit (samain sama cache TTL API-nya) biar hemat quota.
+     *
+     * @return array<int, array<string, mixed>>
      */
     public function getDelynnSchedule(): array
     {
-        return Cache::remember('delynn_theater_schedule', 300, function () {
+        /** @var array<int, array<string, mixed>> */
+        return Cache::remember('delynn_theater_schedule', 300, function (): array {
             $response = Http::withHeaders([
                 'x-api-key' => $this->apiKey,
             ])->get("{$this->baseUrl}/api/v1/theater", [
@@ -33,16 +37,29 @@ class TheaterScheduleService
                 return [];
             }
 
-            $data = $response->json('data') ?? [];
+            $data = $response->json('data');
+            if (! is_array($data)) {
+                return [];
+            }
 
-            // Filter: cuma ambil show yang ada "Delynn" di lineup
-            return collect($data)
-                ->filter(function ($show) {
-                    return collect($show['lineup'] ?? [])
-                        ->contains(fn ($member) => $member['name'] === 'Delynn');
-                })
-                ->values()
-                ->all();
+            return array_values(array_filter($data, function (mixed $show): bool {
+                if (! is_array($show)) {
+                    return false;
+                }
+
+                $lineup = $show['lineup'] ?? [];
+                if (! is_array($lineup)) {
+                    return false;
+                }
+
+                foreach ($lineup as $member) {
+                    if (is_array($member) && ($member['name'] ?? null) === 'Delynn') {
+                        return true;
+                    }
+                }
+
+                return false;
+            }));
         });
     }
 }

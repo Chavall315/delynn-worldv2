@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\TimelineEvent;
 use App\Services\SupabaseStorageService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
+use Illuminate\View\View;
 
 class TimelineController extends Controller
 {
@@ -15,19 +18,21 @@ class TimelineController extends Controller
         $this->storage = $storage;
     }
 
-    public function timeline()
+    public function timeline(): View
     {
         $events = TimelineEvent::orderBy('event_date', 'desc')->get();
+
         return view('timeline', compact('events'));
     }
 
-    public function index()
+    public function index(): View
     {
         $events = TimelineEvent::orderBy('event_date', 'desc')->get();
+
         return view('admin.timeline.index', compact('events'));
     }
 
-    public function store(Request $request)
+    public function store(Request $request): RedirectResponse
     {
         $request->validate([
             'title' => 'required|string|max:255',
@@ -39,7 +44,9 @@ class TimelineController extends Controller
         $data = $request->only(['title', 'description', 'event_date']);
 
         if ($request->hasFile('photo')) {
-            $result = $this->storage->upload($request->file('photo'));
+            /** @var UploadedFile $photo */
+            $photo = $request->file('photo');
+            $result = $this->storage->upload($photo);
             $data['photo_url'] = $result['url'];
             $data['photo_path'] = $result['path'];
         }
@@ -49,7 +56,7 @@ class TimelineController extends Controller
         return back()->with('success', 'Event berhasil ditambahkan!');
     }
 
-    public function update(Request $request, TimelineEvent $timelineEvent)
+    public function update(Request $request, TimelineEvent $timelineEvent): RedirectResponse
     {
         $request->validate([
             'title' => 'required|string|max:255',
@@ -64,7 +71,9 @@ class TimelineController extends Controller
             if ($timelineEvent->photo_path) {
                 $this->storage->delete($timelineEvent->photo_path);
             }
-            $result = $this->storage->upload($request->file('photo'));
+            /** @var UploadedFile $photo */
+            $photo = $request->file('photo');
+            $result = $this->storage->upload($photo);
             $data['photo_url'] = $result['url'];
             $data['photo_path'] = $result['path'];
         }
@@ -74,7 +83,7 @@ class TimelineController extends Controller
         return back()->with('success', 'Event berhasil diupdate!');
     }
 
-    public function destroy(TimelineEvent $timelineEvent)
+    public function destroy(TimelineEvent $timelineEvent): RedirectResponse
     {
         if ($timelineEvent->photo_path) {
             $this->storage->delete($timelineEvent->photo_path);
